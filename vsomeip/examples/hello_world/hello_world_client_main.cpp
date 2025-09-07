@@ -8,13 +8,6 @@
 #include <vsomeip/vsomeip.hpp>
 #include "hello_world_client.hpp"
 
-#include "iox/duration.hpp"
-#include "iox2/event_id.hpp"
-#include "iox2/log.hpp"
-#include "iox2/node.hpp"
-#include "iox2/service_name.hpp"
-#include "iox2/service_type.hpp"
-
 #ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
 hello_world_client* hw_cl_ptr(nullptr);
 void handle_signal(int _signal) {
@@ -23,10 +16,7 @@ void handle_signal(int _signal) {
 }
 #endif
 
-constexpr iox::units::Duration CYCLE_TIME = iox::units::Duration::fromSeconds(1);
-
 int main(int argc, char** argv) {
-
     (void)argc;
     (void)argv;
 

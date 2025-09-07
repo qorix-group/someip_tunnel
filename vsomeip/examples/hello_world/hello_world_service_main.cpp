@@ -7,7 +7,6 @@
 #endif
 #include <vsomeip/vsomeip.hpp>
 #include "hello_world_service.hpp"
-#include <iceoryx2_bridge.hpp>
 
 #ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
 hello_world_service* hw_srv_ptr(nullptr);
@@ -21,8 +20,16 @@ int main(int argc, char** argv) {
     (void)argc;
     (void)argv;
 
-    SomeipTunnel tunnel;
-
-    tunnel.init();
-    tunnel.start();
+    hello_world_service hw_srv;
+#ifndef VSOMEIP_ENABLE_SIGNAL_HANDLING
+    hw_srv_ptr = &hw_srv;
+    signal(SIGINT, handle_signal);
+    signal(SIGTERM, handle_signal);
+#endif
+    if (hw_srv.init()) {
+        hw_srv.start();
+        return 0;
+    } else {
+        return 1;
+    }
 }

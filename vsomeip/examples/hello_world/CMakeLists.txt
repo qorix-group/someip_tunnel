@@ -8,10 +8,6 @@ project (vSomeIPHelloWorld)
 
 find_package(Threads REQUIRED)
 
-
-list(APPEND CMAKE_PREFIX_PATH "/opt/custom")
-find_package(iceoryx2-cxx REQUIRED)
-
 set(VSOMEIP_NAME "vsomeip3")
 
 # create_target("executable")
@@ -30,8 +26,8 @@ endfunction()
 # link_target("executable")
 function(link_target executable)
     add_executable(hello_world_${executable})
-    target_sources(hello_world_${executable} PRIVATE hello_world_${executable}_main.cpp iceoryx2_bridge.cpp)
-    target_link_libraries(hello_world_${executable} PRIVATE vsomeip_hello_world_${executable} vsomeip3 Threads::Threads iceoryx2-cxx::static-lib-cxx)
+    target_sources(hello_world_${executable} PRIVATE hello_world_${executable}_main.cpp)
+    target_link_libraries(hello_world_${executable} PRIVATE vsomeip_hello_world_${executable} vsomeip3 Threads::Threads)
 endfunction()
 
 include_directories(${VSOMEIP_INCLUDE_DIRS})

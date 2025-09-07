@@ -1,0 +1,6 @@
+#!/bin/bash
+# Source this file to set LD_LIBRARY_PATH for rootfs/lib and build folder
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export LD_LIBRARY_PATH="$REPO_ROOT/rootfs/lib:$REPO_ROOT/build${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export VSOMEIP_CONFIGURATION="$REPO_ROOT/vsomeip/config/vsomeip-local.json"

@@ -655,6 +655,7 @@ endif()
 # build routing manager daemon and hello world examples (Non-Windows only)
 if (NOT MSVC)
 add_subdirectory( examples/routingmanagerd )
+add_subdirectory( examples/tunnel )
 add_subdirectory( examples/hello_world )
 endif()
 
@@ -664,7 +665,7 @@ add_subdirectory( tools/vsomeip_ctrl )
 
 # build examples
 add_custom_target( examples )
-add_subdirectory( examples EXCLUDE_FROM_ALL )
+add_subdirectory( examples  )
 
 ##############################################################################
 # add test directory
