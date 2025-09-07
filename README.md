@@ -48,4 +48,59 @@ Run it as described above, for example:
 ```
 
 
-This is the place where interaction with SOME/IP happens and all needed changes to tunnel for/to RUST shall be done here
+This is the place where interaction with SOME/IP happens and all needed changes to tunnel for/to RUST shall be done here. THIS IS WIP, ALL INTERACTION WITH SOMEIP DAEMON SHALL BE ADDED IN HERE
+
+## How the Tunnel to/from Rust Works
+
+The tunnel example bridges SOME/IP and Rust using Iceoryx2 IPC services:
+
+- **TunnelToRust**: SOME/IP messages received by the tunnel are packed into a header (`SomeipTunnelHeader`) and payload (`SomeipTunnelPayload`), then published to the `TunnelToRust` Iceoryx2 service. Rust code can subscribe to this service to receive SOME/IP messages.
+- **TunnelFromRust**: The tunnel subscribes to the `TunnelFromRust` Iceoryx2 service. Rust code can publish messages to this service using the same header and payload format. The tunnel will unpack these messages and send them as SOME/IP responses or service offers.
+
+### Message Format
+- Header: Contains type, service/instance/method IDs, and a unique ID.
+- Payload: Contains the raw SOME/IP message data.
+
+### Rust Integration
+- Subscribe to `TunnelToRust` to receive SOME/IP messages from C++.
+- Publish to `TunnelFromRust` to send messages to SOME/IP via the tunnel.
+- Use the same header and payload structures as defined in `iceoryx2_bridge.hpp`.
+
+This mechanism allows seamless communication between Rust and SOME/IP using shared memory IPC.
+
+Rust compatible data types for PubSub:
+```rust
+#[derive(Debug, ZeroCopySend)]
+#[repr(C)]
+#[type_name("TunnelMsgType")]
+pub enum TunnelMsgType {
+    OfferService = 0,
+    FindService = 1,
+    OfferServiceAck = 2,
+    FindServiceAck = 3,
+    Message = 4,
+}
+
+#[derive(Debug, ZeroCopySend)]
+#[repr(C)]
+#[type_name("SomeipTunnelHeader")]
+pub struct SomeipTunnelHeader {
+    type_: TunnelMsgType,
+
+    // below fields are optional based on type, for simplicity i did not modeled that
+    service_id: u16,
+    instance_id: u16,
+    method_id: u16,
+
+    id: u64, // if comes != 0 then shall be rewritten for response.
+}
+
+#[derive(Debug, ZeroCopySend)]
+#[repr(C)]
+#[type_name("SomeipTunnelPayload")]
+pub struct SomeipTunnelPayload {
+    length: u16,
+    payload: [u8; 1500],
+}
+
+```
