@@ -1,5 +1,17 @@
 # someip_tunnel
 
+# prerequisites
+
+- git LFS
+- boost >= 1.66
+- libacl
+
+```bash
+sudo apt-get install -y \
+   git-lfs \
+   libboost-all-dev \
+   libacl1-dev
+```
 
 # rootfs folder
 
@@ -44,7 +56,7 @@ After building, the tunnel example binary will be in:
 
 Run it as described above, for example:
 ```bash
-./build/examples/tunnel/someip_tunnel
+./build/examples/tunnel/tunnel
 ```
 
 
