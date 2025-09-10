@@ -35,6 +35,12 @@ SomeipTunnel::SomeipTunnel() :
     mRecv = std::thread{&SomeipTunnel::recvInternal, this};
 }
 
+void on_state(vsomeip::state_type_e _state) {
+    if (_state == vsomeip::state_type_e::ST_REGISTERED) {
+        std::cout << "REGISTERED WIORKING" << std::endl;
+    }
+}
+
 void SomeipTunnel::init() {
 
     // init the application
@@ -43,8 +49,30 @@ void SomeipTunnel::init() {
         return;
     }
 
+    mApp->register_state_handler(&on_state);
+
     mApp->register_message_handler(vsomeip_v3::ANY_SERVICE, vsomeip_v3::ANY_INSTANCE, vsomeip_v3::ANY_METHOD,
                                    std::bind(&SomeipTunnel::fromSomeip, this, std::placeholders::_1));
+
+    mApp->register_availability_handler(
+            vsomeip_v3::ANY_SERVICE, vsomeip_v3::ANY_INSTANCE,
+            std::bind(&SomeipTunnel::serviceStateChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+}
+
+void SomeipTunnel::serviceStateChanged(vsomeip_v3::service_t s, vsomeip_v3::instance_t i, bool active) {
+    std::cout << "Received serviceStateChanged from SOME/IP service " << s << " instance " << i << " active " << active << std::endl;
+
+    auto new_sample = mToGateway.loan().expect("should have ssample");
+
+    SomeipTunnelHeader& header = new_sample.user_header_mut();
+
+    header.type = TunnelMsgType::FIND_SERVICE_ACK;
+
+    header.instance_id = i;
+    header.service_id = s;
+    header.is_active = active;
+
+    ::iox2::send(std::move(new_sample)).expect("Sending sample shall work");
 }
 
 void SomeipTunnel::fromSomeip(const std::shared_ptr<vsomeip_v3::message>& msg) {
@@ -127,7 +155,22 @@ void SomeipTunnel::incommingMsg(const iox2::Sample<iox2::ServiceType::Ipc, Somei
         mApp->offer_service(header.service_id, header.instance_id);
         break;
     }
-    case TunnelMsgType::FIND_SERVICE:
+    case TunnelMsgType::FIND_SERVICE: {
+
+        for (int i = 0; i < header.find_service_metadata.len; i++) {
+            std::set<vsomeip::eventgroup_t> its_groups;
+            for (int j = 0; j < header.find_service_metadata.len; j++) {
+                its_groups.insert(header.find_service_metadata.event_infos[i].event_groups[j]);
+            }
+
+            mApp->request_event(header.service_id, header.instance_id, header.find_service_metadata.event_infos[i].event_id, its_groups,
+                                (vsomeip_v3::event_type_e)header.find_service_metadata.event_infos[i].typ);
+            mApp->subscribe(header.service_id, header.instance_id, *its_groups.begin());
+        }
+
+        mApp->request_service(header.service_id, header.instance_id);
+        break;
+    }
     case TunnelMsgType::OFFER_SERVICE_ACK:
     case TunnelMsgType::FIND_SERVICE_ACK:
     case TunnelMsgType::MESSAGE: {

@@ -150,6 +150,7 @@ public:
         uint32_t its_size = 1;
 
         while (running_) {
+
             std::unique_lock<std::mutex> its_lock(notify_mutex_);
             while (!is_offered_ && running_)
                 notify_condition_.wait(its_lock);
@@ -157,8 +158,9 @@ public:
                 if (its_size == sizeof(its_data))
                     its_size = 1;
 
-                for (uint32_t i = 0; i < its_size; ++i)
+                for (uint32_t i = 0; i < its_size; ++i) {
                     its_data[i] = static_cast<uint8_t>(i);
+                }
 
                 {
                     std::lock_guard<std::mutex> its_lock(payload_mutex_);

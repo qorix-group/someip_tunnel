@@ -14,6 +14,7 @@
 #include <random>
 #include <iostream>
 #include <iomanip>
+#include "iox/vector.hpp"
 
 enum class TunnelMsgType : uint32_t {
     OFFER_SERVICE,
@@ -23,15 +24,36 @@ enum class TunnelMsgType : uint32_t {
     MESSAGE,
 };
 
+enum class EventType : uint32_t {
+    Field,
+    Event,
+};
+
+struct SomeIPEventDesc {
+    static constexpr const char* IOX2_TYPE_NAME = "SomeIPEventDesc";
+    uint16_t event_id;
+    uint16_t event_groups[4];
+    uint8_t len;
+    EventType typ;
+};
+
+struct FindServiceEntry {
+    static constexpr const char* IOX2_TYPE_NAME = "FindServiceEntry";
+    SomeIPEventDesc event_infos[10];
+    uint8_t len;
+    // We can add other infos if we need
+};
+
 struct SomeipTunnelHeader {
     static constexpr const char* IOX2_TYPE_NAME = "SomeipTunnelHeader";
 
     TunnelMsgType type;
-
-    // below fields are optional based on type, for simplicity i did not modeled that
     uint16_t service_id;
     uint16_t instance_id;
     uint16_t method_id;
+    FindServiceEntry find_service_metadata; // only when typ == FindService
+
+    bool is_active; // Only relevant for FindServiceAck
 
     uint64_t id; // if comes != 0 then shall be rewritten for response.
 };
@@ -43,23 +65,57 @@ struct SomeipTunnelPayload {
     uint8_t payload[1500];
 };
 
-inline auto operator<<(std::ostream& stream, const SomeipTunnelPayload& value) -> std::ostream& {
-    stream << "SomeipTunnelPayload { len: " << value.length << ", payload = " << std::hex << std::setw(4) << std::setfill('0');
-    for (int i = 0; i < value.length; i++) {
-        stream << " " << (int)value.payload[i];
+inline std::ostream& operator<<(std::ostream& os, const EventType& typ) {
+    switch (typ) {
+    case EventType::Field:
+        os << "Field";
+        break;
+    case EventType::Event:
+        os << "Event";
+        break;
+    default:
+        os << "Unknown";
+        break;
     }
-
-    stream << std::dec << "}";
-
-    return stream;
+    return os;
 }
 
-inline auto operator<<(std::ostream& stream, const SomeipTunnelHeader& value) -> std::ostream& {
-    stream << "SomeipTunnelHeader { type: " << static_cast<uint32_t>(value.type) << ", service_id: " << std::hex << std::setw(4)
-           << std::setfill('0') << value.service_id << ", instance_id: " << std::hex << std::setw(4) << std::setfill('0')
-           << value.instance_id << ", method_id: " << std::hex << std::setw(4) << std::setfill('0') << value.method_id
-           << ", id: " << std::dec << value.id << " }";
-    return stream;
+inline std::ostream& operator<<(std::ostream& os, const SomeIPEventDesc& desc) {
+    os << "{event_id: " << desc.event_id << ", event_groups: [";
+    for (size_t i = 0; i < desc.len; ++i) {
+        os << desc.event_groups[i];
+        if (i + 1 < desc.len)
+            os << ", ";
+    }
+    os << "], typ: " << desc.typ << "}";
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const FindServiceEntry& entry) {
+    os << "{event_infos: [";
+    for (size_t i = 0; i < entry.len; ++i) {
+        os << entry.event_infos[i];
+        if (i + 1 < entry.len)
+            os << ", ";
+    }
+    os << "]}";
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const SomeipTunnelHeader& value) {
+    os << "SomeipTunnelHeader { type: " << static_cast<uint32_t>(value.type) << ", service_id: " << value.service_id
+       << ", instance_id: " << value.instance_id << ", method_id: " << value.method_id
+       << ", find_service_metadata: " << value.find_service_metadata << ", id: " << value.id << " }";
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const SomeipTunnelPayload& value) {
+    os << "SomeipTunnelPayload { len: " << value.length << ", payload = ";
+    for (int i = 0; i < value.length; i++) {
+        os << std::hex << std::setw(2) << std::setfill('0') << (int)value.payload[i] << " ";
+    }
+    os << std::dec << "}";
+    return os;
 }
 
 class SomeipTunnel {
@@ -88,4 +144,5 @@ private:
     void recvInternal();
     void fromSomeip(const std::shared_ptr<vsomeip_v3::message>& msg);
     void incommingMsg(const iox2::Sample<iox2::ServiceType::Ipc, SomeipTunnelPayload, SomeipTunnelHeader>& sample);
+    void serviceStateChanged(vsomeip_v3::service_t, vsomeip_v3::instance_t, bool);
 };

@@ -80,39 +80,3 @@ The tunnel example bridges SOME/IP and Rust using Iceoryx2 IPC services:
 
 This mechanism allows seamless communication between Rust and SOME/IP using shared memory IPC.
 
-Rust compatible data types for PubSub:
-```rust
-#[derive(Debug, ZeroCopySend)]
-#[repr(C)]
-#[type_name("TunnelMsgType")]
-pub enum TunnelMsgType {
-    OfferService = 0,
-    FindService = 1,
-    OfferServiceAck = 2,
-    FindServiceAck = 3,
-    Message = 4,
-}
-
-#[derive(Debug, ZeroCopySend)]
-#[repr(C)]
-#[type_name("SomeipTunnelHeader")]
-pub struct SomeipTunnelHeader {
-    type_: TunnelMsgType,
-
-    // below fields are optional based on type, for simplicity i did not modeled that
-    service_id: u16,
-    instance_id: u16,
-    method_id: u16,
-
-    id: u64, // if comes != 0 then shall be rewritten for response.
-}
-
-#[derive(Debug, ZeroCopySend)]
-#[repr(C)]
-#[type_name("SomeipTunnelPayload")]
-pub struct SomeipTunnelPayload {
-    length: u16,
-    payload: [u8; 1500],
-}
-
-```
