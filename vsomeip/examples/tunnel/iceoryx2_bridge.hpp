@@ -16,13 +16,7 @@
 #include <iomanip>
 #include "iox/vector.hpp"
 
-enum class TunnelMsgType : uint32_t {
-    OFFER_SERVICE,
-    FIND_SERVICE,
-    OFFER_SERVICE_ACK,
-    FIND_SERVICE_ACK,
-    MESSAGE,
-};
+enum class TunnelMsgType : uint32_t { OFFER_SERVICE, FIND_SERVICE, OFFER_SERVICE_ACK, FIND_SERVICE_ACK, MESSAGE, EVENT };
 
 enum class EventType : uint32_t {
     Field,
@@ -37,8 +31,8 @@ struct SomeIPEventDesc {
     EventType typ;
 };
 
-struct FindServiceEntry {
-    static constexpr const char* IOX2_TYPE_NAME = "FindServiceEntry";
+struct ServiceDescEntry {
+    static constexpr const char* IOX2_TYPE_NAME = "ServiceDescEntry";
     SomeIPEventDesc event_infos[10];
     uint8_t len;
     // We can add other infos if we need
@@ -51,7 +45,7 @@ struct SomeipTunnelHeader {
     uint16_t service_id;
     uint16_t instance_id;
     uint16_t method_id;
-    FindServiceEntry find_service_metadata; // only when typ == FindService
+    ServiceDescEntry service_metadata; // only when typ == FindService
 
     bool is_active; // Only relevant for FindServiceAck
 
@@ -91,7 +85,7 @@ inline std::ostream& operator<<(std::ostream& os, const SomeIPEventDesc& desc) {
     return os;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const FindServiceEntry& entry) {
+inline std::ostream& operator<<(std::ostream& os, const ServiceDescEntry& entry) {
     os << "{event_infos: [";
     for (size_t i = 0; i < entry.len; ++i) {
         os << entry.event_infos[i];
@@ -105,7 +99,7 @@ inline std::ostream& operator<<(std::ostream& os, const FindServiceEntry& entry)
 inline std::ostream& operator<<(std::ostream& os, const SomeipTunnelHeader& value) {
     os << "SomeipTunnelHeader { type: " << static_cast<uint32_t>(value.type) << ", service_id: " << value.service_id
        << ", instance_id: " << value.instance_id << ", method_id: " << value.method_id
-       << ", find_service_metadata: " << value.find_service_metadata << ", id: " << value.id << " }";
+       << ", find_service_metadata: " << value.service_metadata << ", id: " << value.id << " }";
     return os;
 }
 

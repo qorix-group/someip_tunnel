@@ -152,19 +152,30 @@ void SomeipTunnel::incommingMsg(const iox2::Sample<iox2::ServiceType::Ipc, Somei
 
     switch (header.type) {
     case TunnelMsgType::OFFER_SERVICE: {
+
+        for (int i = 0; i < header.service_metadata.len; i++) {
+            std::set<vsomeip::eventgroup_t> its_groups;
+            for (int j = 0; j < header.service_metadata.len; j++) {
+                its_groups.insert(header.service_metadata.event_infos[i].event_groups[j]);
+            }
+
+            mApp->offer_event(header.service_id, header.instance_id, header.service_metadata.event_infos[i].event_id, its_groups,
+                              (vsomeip_v3::event_type_e)header.service_metadata.event_infos[i].typ);
+        }
+
         mApp->offer_service(header.service_id, header.instance_id);
         break;
     }
     case TunnelMsgType::FIND_SERVICE: {
 
-        for (int i = 0; i < header.find_service_metadata.len; i++) {
+        for (int i = 0; i < header.service_metadata.len; i++) {
             std::set<vsomeip::eventgroup_t> its_groups;
-            for (int j = 0; j < header.find_service_metadata.len; j++) {
-                its_groups.insert(header.find_service_metadata.event_infos[i].event_groups[j]);
+            for (int j = 0; j < header.service_metadata.len; j++) {
+                its_groups.insert(header.service_metadata.event_infos[i].event_groups[j]);
             }
 
-            mApp->request_event(header.service_id, header.instance_id, header.find_service_metadata.event_infos[i].event_id, its_groups,
-                                (vsomeip_v3::event_type_e)header.find_service_metadata.event_infos[i].typ);
+            mApp->request_event(header.service_id, header.instance_id, header.service_metadata.event_infos[i].event_id, its_groups,
+                                (vsomeip_v3::event_type_e)header.service_metadata.event_infos[i].typ);
             mApp->subscribe(header.service_id, header.instance_id, *its_groups.begin());
         }
 
@@ -192,6 +203,23 @@ void SomeipTunnel::incommingMsg(const iox2::Sample<iox2::ServiceType::Ipc, Somei
 
         // Send the response back
         mApp->send(resp);
+        break;
+    }
+
+    case TunnelMsgType::EVENT: {
+
+        auto data = mRtm->create_payload();
+
+        auto msg_data = sample.payload();
+
+        auto end = std::begin(msg_data.payload);
+        std::advance(end, msg_data.length);
+
+        std::vector<vsomeip::byte_t> pl_data(std::begin(msg_data.payload), end);
+        data->set_data(pl_data);
+
+        // Send notification
+        mApp->notify(header.service_id, header.instance_id, header.method_id, data);
         break;
     }
     }
