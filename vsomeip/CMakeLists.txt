@@ -656,6 +656,8 @@ endif()
 if (NOT MSVC)
 add_subdirectory( examples/routingmanagerd )
 add_subdirectory( examples/tunnel )
+add_subdirectory( examples/poc_rain_sensor )
+add_subdirectory( examples/poc_window_position_controller )
 add_subdirectory( examples/hello_world )
 endif()
 
