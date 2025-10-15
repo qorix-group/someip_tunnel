@@ -143,22 +143,31 @@ public:
     }
 
     void notify() {
-        vsomeip::byte_t its_data[1];
+        static int sCounter = 0;
+
+        vsomeip::byte_t its_data[2]{};
         while (running_) {
             std::unique_lock<std::mutex> its_lock(notify_mutex_);
             while (!is_offered_ && running_)
                 notify_condition_.wait(its_lock);
             while (is_offered_ && running_) {
-                its_data[0] ^= static_cast<uint8_t>(1);
+                its_data[1] ^= static_cast<uint8_t>(1);
+                its_data[0] = its_data[1] % 45;
+
+                if ((sCounter % 4) == 0) {
+                    its_data[0] += 1;
+                }
+
                 {
                     std::lock_guard<std::mutex> its_lock(payload_mutex_);
-                    payload_->set_data(its_data, 1);
+                    payload_->set_data(its_data, 2);
 
-                    std::cout << "Rain sensor status: " << static_cast<int>(its_data[0]) << std::endl;
+                    std::cout << "Rain sensor status: " << static_cast<int>(its_data[1]) << std::endl;
                     app_->notify(RAIN_SENSOR_SERVICE_ID, RAIN_SENSOR_INSTANCE_ID, RAIN_SENSOR_EVENT_ID, payload_);
                 }
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(cycle_));
+                sCounter++;
             }
         }
     }
