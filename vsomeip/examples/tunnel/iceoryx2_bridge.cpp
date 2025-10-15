@@ -7,16 +7,19 @@
 #include <cassert>
 #include <iterator>
 #include <iox2/node.hpp>
+#include <mutex>
 #include <thread>
-
+#include <vsomeip/internal/logger.hpp>
 constexpr iox::units::Duration CYCLE_TIME = iox::units::Duration::fromMilliseconds(100);
 
-SomeipTunnel::SomeipTunnel() :
-    mNode{iox2::NodeBuilder().create<iox2::ServiceType::Ipc>().expect("successful node creation")}, mRecv{}, mRtm{vsomeip::runtime::get()},
-    mApp{mRtm->create_application()},
+SomeipTunnel::SomeipTunnel(std::shared_ptr<vsomeip_v3::runtime> runtime) :
+    mNode{iox2::NodeBuilder().create<iox2::ServiceType::Ipc>().expect("successful node creation")}, mRecv{}, mShallRun{true}, mRtm{runtime},
+    mApp{mRtm->create_application("Tunnel")},
     mToGateway{mNode.service_builder(iox2::ServiceName::create("TunnelToRust").expect("valid service name"))
                        .publish_subscribe<SomeipTunnelPayload>()
                        .user_header<SomeipTunnelHeader>()
+                       .subscriber_max_buffer_size(20)
+                       .history_size(20)
                        .open_or_create()
                        .expect("successful service creation/opening")
                        .publisher_builder()
@@ -25,6 +28,8 @@ SomeipTunnel::SomeipTunnel() :
     mFromGateway{mNode.service_builder(iox2::ServiceName::create("TunnelFromRust").expect("valid service name"))
                          .publish_subscribe<SomeipTunnelPayload>()
                          .user_header<SomeipTunnelHeader>()
+                         .subscriber_max_buffer_size(20)
+                         .history_size(20)
                          .open_or_create()
                          .expect("successful service creation/opening")
                          .subscriber_builder()
@@ -37,7 +42,7 @@ SomeipTunnel::SomeipTunnel() :
 
 void on_state(vsomeip::state_type_e _state) {
     if (_state == vsomeip::state_type_e::ST_REGISTERED) {
-        std::cout << "REGISTERED WIORKING" << std::endl;
+        VSOMEIP_INFO << "REGISTERED WORKING";
     }
 }
 
@@ -45,7 +50,7 @@ void SomeipTunnel::init() {
 
     // init the application
     if (!mApp->init()) {
-        std::cout << "Couldn't initialize application" << std::endl;
+        VSOMEIP_ERROR << "Couldn't initialize application";
         return;
     }
 
@@ -59,10 +64,19 @@ void SomeipTunnel::init() {
             std::bind(&SomeipTunnel::serviceStateChanged, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
-void SomeipTunnel::serviceStateChanged(vsomeip_v3::service_t s, vsomeip_v3::instance_t i, bool active) {
-    std::cout << "Received serviceStateChanged from SOME/IP service " << s << " instance " << i << " active " << active << std::endl;
+void SomeipTunnel::stop() {
+    mApp->stop();
 
-    auto new_sample = mToGateway.loan().expect("should have ssample");
+    mShallRun.store(false);
+    mRecv.join();
+}
+
+void SomeipTunnel::serviceStateChanged(vsomeip_v3::service_t s, vsomeip_v3::instance_t i, bool active) {
+    VSOMEIP_INFO << "Received serviceStateChanged from SOME/IP service " << s << " instance " << i << " active " << active;
+
+    std::lock_guard<std::mutex> lck{mToGatewayMutex};
+
+    auto new_sample = mToGateway.loan().expect("should have sample");
 
     SomeipTunnelHeader& header = new_sample.user_header_mut();
 
@@ -73,12 +87,12 @@ void SomeipTunnel::serviceStateChanged(vsomeip_v3::service_t s, vsomeip_v3::inst
     header.is_active = active;
 
     ::iox2::send(std::move(new_sample)).expect("Sending sample shall work");
+    VSOMEIP_INFO << "Service state changed was send via tunnel!";
 }
 
 void SomeipTunnel::fromSomeip(const std::shared_ptr<vsomeip_v3::message>& msg) {
 
-    std::cout << "Received message from SOME/IP" << std::endl;
-
+    std::lock_guard<std::mutex> lck{mToGatewayMutex};
     auto new_sample = mToGateway.loan().expect("should have ssample");
 
     SomeipTunnelHeader& header = new_sample.user_header_mut();
@@ -101,20 +115,21 @@ void SomeipTunnel::fromSomeip(const std::shared_ptr<vsomeip_v3::message>& msg) {
 
     mMessagesInProgress.emplace(header.id, msg);
 
-    std::cout << "Passing over tunnel message with header: " << header << ", payload: " << payload << std::endl;
+    VSOMEIP_INFO << "Passing over tunnel message with header: " << header << ", payload: " << payload;
     ::iox2::send(std::move(new_sample)).expect("Sending sample shall work");
 }
 
 void SomeipTunnel::start() {
 
     mApp->start(); // blocking
+    mApp->clear_all_handler();
 }
 
 void SomeipTunnel::recvInternal() {
 
     auto counter = 0;
 
-    while (mNode.wait(CYCLE_TIME).has_value()) {
+    while (mNode.wait(CYCLE_TIME).has_value() && mShallRun) {
 
         counter += 1;
         this->fromGateway();
@@ -148,7 +163,7 @@ void SomeipTunnel::incommingMsg(const iox2::Sample<iox2::ServiceType::Ipc, Somei
 
     auto header = sample.user_header();
 
-    std::cout << "Sample received, header: " << header << ", payload: " << sample.payload() << std::endl;
+    VSOMEIP_INFO << "Sample received, header: " << header << ", payload: " << sample.payload();
 
     switch (header.type) {
     case TunnelMsgType::OFFER_SERVICE: {

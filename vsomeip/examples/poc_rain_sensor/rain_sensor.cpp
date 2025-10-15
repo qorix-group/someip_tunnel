@@ -25,9 +25,9 @@
 class service_rain_sensor {
 public:
     service_rain_sensor(uint32_t _cycle) :
-        app_(vsomeip::runtime::get()->create_application()), is_registered_(false), cycle_(_cycle), blocked_(false), running_(true),
-        is_offered_(false), offer_thread_(std::bind(&service_rain_sensor::run, this)), notify_thread_(std::bind(&service_rain_sensor::notify, this)) {
-    }
+        app_(vsomeip::runtime::get()->create_application("RainSensor")), is_registered_(false), cycle_(_cycle), blocked_(false),
+        running_(true), is_offered_(false), offer_thread_(std::bind(&service_rain_sensor::run, this)),
+        notify_thread_(std::bind(&service_rain_sensor::notify, this)) { }
 
     bool init() {
         std::lock_guard<std::mutex> its_lock(mutex_);

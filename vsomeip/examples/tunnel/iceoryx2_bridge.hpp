@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <cstdint>
 
 #include "iox/duration.hpp"
@@ -8,6 +9,7 @@
 #include "iox2/service_name.hpp"
 #include "iox2/service_type.hpp"
 #include <iox2/subscriber.hpp>
+#include <memory>
 #include <thread>
 #include <unordered_map>
 #include <vsomeip/vsomeip.hpp>
@@ -117,14 +119,18 @@ class SomeipTunnel {
 public:
     void start();
     void init();
+    void stop();
 
-    SomeipTunnel();
+    SomeipTunnel(std::shared_ptr<vsomeip::runtime> runtime);
 
 private:
     iox2::Node<iox2::ServiceType::Ipc> mNode;
     std::thread mRecv;
+    std::atomic_bool mShallRun;
     std::shared_ptr<vsomeip::runtime> mRtm;
     std::shared_ptr<vsomeip::application> mApp;
+
+    std::mutex mToGatewayMutex;
     iox2::Publisher<iox2::ServiceType::Ipc, SomeipTunnelPayload, SomeipTunnelHeader> mToGateway;
     iox2::Subscriber<iox2::ServiceType::Ipc, SomeipTunnelPayload, SomeipTunnelHeader> mFromGateway;
 
