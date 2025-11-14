@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Contributors to the Eclipse Foundation
+# Copyright (c) 2025 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -38,10 +38,6 @@ endmacro()
 
 include(CMakeFindDependencyMacro)
 
-find_dependency(iceoryx_hoofs)
-find_dependency(iceoryx2-bb-cxx)
-find_dependency(iceoryx2-c)
-
-include("${CMAKE_CURRENT_LIST_DIR}/iceoryx2-cxxTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/iceoryx2-bb-cxxTargets.cmake")
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
-check_required_components("iceoryx2-cxx")
+check_required_components("iceoryx2-bb-cxx")

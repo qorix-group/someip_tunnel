@@ -19,7 +19,7 @@ set(CMAKE_IMPORT_FILE_VERSION 1)
 set(_cmake_targets_defined "")
 set(_cmake_targets_not_defined "")
 set(_cmake_expected_targets "")
-foreach(_cmake_expected_target IN ITEMS iceoryx2-c::includes-only iceoryx2-c::static-lib iceoryx2-c::shared-lib)
+foreach(_cmake_expected_target IN ITEMS iceoryx2-bb-cxx::iceoryx2-bb-containers-cxx)
   list(APPEND _cmake_expected_targets "${_cmake_expected_target}")
   if(TARGET "${_cmake_expected_target}")
     list(APPEND _cmake_targets_defined "${_cmake_expected_target}")
@@ -55,33 +55,20 @@ if(_IMPORT_PREFIX STREQUAL "/")
   set(_IMPORT_PREFIX "")
 endif()
 
-# Create imported target iceoryx2-c::includes-only
-add_library(iceoryx2-c::includes-only INTERFACE IMPORTED)
+# Create imported target iceoryx2-bb-cxx::iceoryx2-bb-containers-cxx
+add_library(iceoryx2-bb-cxx::iceoryx2-bb-containers-cxx INTERFACE IMPORTED)
 
-set_target_properties(iceoryx2-c::includes-only PROPERTIES
+set_target_properties(iceoryx2-bb-cxx::iceoryx2-bb-containers-cxx PROPERTIES
+  INTERFACE_COMPILE_FEATURES "cxx_std_14"
   INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/iceoryx2/v0.7.0"
 )
 
-# Create imported target iceoryx2-c::static-lib
-add_library(iceoryx2-c::static-lib INTERFACE IMPORTED)
-
-set_target_properties(iceoryx2-c::static-lib PROPERTIES
-  INTERFACE_LINK_LIBRARIES "iceoryx2-c::includes-only;${_IMPORT_PREFIX}/lib/libiceoryx2_ffi_c.a;\$<\$<NOT:\$<PLATFORM_ID:Windows>>:m;pthread>;\$<\$<PLATFORM_ID:Windows>:userenv;ntdll;psapi;ws2_32;wsock32>;\$<\$<AND:\$<PLATFORM_ID:Windows>,\$<OR:\$<C_COMPILER_ID:MSVC>,\$<CXX_COMPILER_ID:MSVC>>>:bcrypt;synchronization>;\$<\$<PLATFORM_ID:Darwin>:stdc++>;\$<\$<PLATFORM_ID:FreeBSD>:rt;util>;\$<\$<PLATFORM_ID:Linux>:dl;rt>"
-)
-
-# Create imported target iceoryx2-c::shared-lib
-add_library(iceoryx2-c::shared-lib INTERFACE IMPORTED)
-
-set_target_properties(iceoryx2-c::shared-lib PROPERTIES
-  INTERFACE_LINK_LIBRARIES "iceoryx2-c::includes-only;${_IMPORT_PREFIX}/lib/libiceoryx2_ffi_c.so"
-)
-
-if(CMAKE_VERSION VERSION_LESS 3.0.0)
-  message(FATAL_ERROR "This file relies on consumers using CMake 3.0.0 or greater.")
+if(CMAKE_VERSION VERSION_LESS 3.1.0)
+  message(FATAL_ERROR "This file relies on consumers using CMake 3.1.0 or greater.")
 endif()
 
 # Load information for each installed configuration.
-file(GLOB _cmake_config_files "${CMAKE_CURRENT_LIST_DIR}/iceoryx2-cTargets-*.cmake")
+file(GLOB _cmake_config_files "${CMAKE_CURRENT_LIST_DIR}/iceoryx2-bb-cxxTargets-*.cmake")
 foreach(_cmake_config_file IN LISTS _cmake_config_files)
   include("${_cmake_config_file}")
 endforeach()

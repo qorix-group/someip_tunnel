@@ -59,7 +59,7 @@ endif()
 add_library(iceoryx2-cxx::includes-only-cxx INTERFACE IMPORTED)
 
 set_target_properties(iceoryx2-cxx::includes-only-cxx PROPERTIES
-  INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/iceoryx2/v0.6.1"
+  INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include/iceoryx2/v0.7.0"
 )
 
 # Create imported target iceoryx2-cxx::static-lib-cxx
@@ -67,7 +67,7 @@ add_library(iceoryx2-cxx::static-lib-cxx STATIC IMPORTED)
 
 set_target_properties(iceoryx2-cxx::static-lib-cxx PROPERTIES
   INTERFACE_COMPILE_FEATURES "cxx_std_17"
-  INTERFACE_LINK_LIBRARIES "iceoryx_hoofs::iceoryx_hoofs;iceoryx2-c::static-lib;iceoryx2-cxx::includes-only-cxx"
+  INTERFACE_LINK_LIBRARIES "iceoryx2-bb-cxx::iceoryx2-bb-containers-cxx;iceoryx_hoofs::iceoryx_hoofs;iceoryx2-c::static-lib;iceoryx2-cxx::includes-only-cxx"
 )
 
 # Create imported target iceoryx2-cxx::shared-lib-cxx
@@ -75,7 +75,7 @@ add_library(iceoryx2-cxx::shared-lib-cxx SHARED IMPORTED)
 
 set_target_properties(iceoryx2-cxx::shared-lib-cxx PROPERTIES
   INTERFACE_COMPILE_FEATURES "cxx_std_17"
-  INTERFACE_LINK_LIBRARIES "iceoryx_hoofs::iceoryx_hoofs;iceoryx2-c::shared-lib;iceoryx2-cxx::includes-only-cxx"
+  INTERFACE_LINK_LIBRARIES "iceoryx2-bb-cxx::iceoryx2-bb-containers-cxx;iceoryx_hoofs::iceoryx_hoofs;iceoryx2-c::shared-lib;iceoryx2-cxx::includes-only-cxx"
 )
 
 if(CMAKE_VERSION VERSION_LESS 3.0.0)
